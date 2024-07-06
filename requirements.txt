@@ -1,0 +1,9 @@
+pytest==8.2.2
+click==8.1.7
+coverage==7.5.4
+pytest-cov==5.0.0
+flake8==7.1.0
+black==24.4.2
+isort==5.13.2
+autopep8==2.3.1
+requests==2.32.3

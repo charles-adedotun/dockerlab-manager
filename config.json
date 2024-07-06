@@ -1,0 +1,15 @@
+{
+    "services": [
+        {
+            "name": "portainer",
+            "enabled": true,
+            "core": true,
+            "compose_file": "./services/portainer/docker-compose.yml"
+        },
+        {
+            "name": "code-server",
+            "enabled": true,
+            "compose_file": "./services/code_server/docker-compose.yml"
+        }
+    ]
+}

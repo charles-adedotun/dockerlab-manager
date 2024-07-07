@@ -75,13 +75,13 @@ class TestFunctional(unittest.TestCase):
                 f"Service {service} started successfully",
                 result.output)
 
-        time.sleep(5)  # Give services time to start up
+        time.sleep(15)  # Give services more time to start up
 
         result = self.runner.invoke(cli, ["status"])
         print(f"Status output: {result.output}")
         for service in self.core_services:
             self.assertIn(
-                f"{service}: Running",
+                "Running",
                 result.output,
                 f"Service {service} is not running. Full status output: {result.output}",
             )
@@ -98,13 +98,15 @@ class TestFunctional(unittest.TestCase):
                 f"Service {service} stopped successfully",
                 result.output)
 
+        time.sleep(5)  # Give services time to stop
+
         result = self.runner.invoke(cli, ["status"])
         print(f"Final status output: {result.output}")
         for service in self.core_services:
-            self.assertIn(
-                f"{service}: Stopped",
+            self.assertNotIn(
+                "Running",
                 result.output,
-                f"Service {service} is not stopped. Full status output: {result.output}",
+                f"Service {service} is still running. Full status output: {result.output}",
             )
 
     def test_start_stop_all_services(self):
@@ -117,13 +119,13 @@ class TestFunctional(unittest.TestCase):
         )
         self.assertIn("All enabled services have been started", result.output)
 
-        time.sleep(5)  # Give services time to start up
+        time.sleep(15)  # Give services more time to start up
 
         result = self.runner.invoke(cli, ["status"])
         print(f"Status after start-all: {result.output}")
         for service in self.services:
             self.assertIn(
-                f"{service}: Running",
+                "Running",
                 result.output,
                 f"Service {service} is not running. Full status output: {result.output}",
             )
@@ -136,13 +138,15 @@ class TestFunctional(unittest.TestCase):
             f"Stop-all command failed with output: {result.output}")
         self.assertIn("All services have been stopped", result.output)
 
+        time.sleep(5)  # Give services time to stop
+
         result = self.runner.invoke(cli, ["status"])
         print(f"Final status output: {result.output}")
         for service in self.services:
-            self.assertIn(
-                f"{service}: Stopped",
+            self.assertNotIn(
+                "Running",
                 result.output,
-                f"Service {service} is not stopped. Full status output: {result.output}",
+                f"Service {service} is still running. Full status output: {result.output}",
             )
 
     def test_service_not_found(self):

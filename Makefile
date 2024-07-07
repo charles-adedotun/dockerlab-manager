@@ -1,6 +1,6 @@
 # Makefile for HomeLab Manager
 
-.PHONY: all install uninstall clean format lint test coverage start stop status help
+.PHONY: all install uninstall clean format lint test unit-test functional-test coverage start stop status help
 SCRIPT_NAME = main.py
 INSTALL_DIR = $(HOME)/.local/bin
 VENV_DIR = venv
@@ -58,14 +58,22 @@ lint: venv
 	@. $(VENV_DIR)/bin/activate && flake8 homelab_manager/ tests/ || true
 	@echo "$(GREEN)Linting completed. Please review any remaining issues manually.$(NC)"
 
-test: venv format lint
-	@echo "$(YELLOW)Running tests...$(NC)"
-	@. $(VENV_DIR)/bin/activate && pytest tests/
-	@echo "$(GREEN)Tests completed.$(NC)"
+unit-test: venv format lint
+	@echo "$(YELLOW)Running unit tests...$(NC)"
+	@. $(VENV_DIR)/bin/activate && pytest tests/test_config.py tests/test_service_manager.py -v
+	@echo "$(GREEN)Unit tests completed.$(NC)"
+
+functional-test: venv format lint
+	@echo "$(YELLOW)Running functional tests...$(NC)"
+	@. $(VENV_DIR)/bin/activate && HOMELAB_CONFIG=test_config.json pytest tests/test_functional.py -v
+	@echo "$(GREEN)Functional tests completed.$(NC)"
+
+test: unit-test functional-test
+	@echo "$(GREEN)All tests completed.$(NC)"
 
 coverage: test
 	@echo "$(YELLOW)Running tests with coverage...$(NC)"
-	@. $(VENV_DIR)/bin/activate && pytest --cov=homelab_manager --cov-report=term-missing --cov-report=html tests/
+	@. $(VENV_DIR)/bin/activate && HOMELAB_CONFIG=test_config.json pytest --cov=homelab_manager --cov-report=term-missing --cov-report=html tests/
 	@echo "$(GREEN)Coverage report generated. See htmlcov/index.html for details.$(NC)"
 
 start: venv
@@ -84,7 +92,9 @@ help:
 	@echo "Available commands:"
 	@echo "  $(GREEN)make install$(NC)    - Install the HomeLab Manager"
 	@echo "  $(RED)make uninstall$(NC)  - Uninstall the HomeLab Manager"
-	@echo "  $(CYAN)make test$(NC)       - Format, lint, and run tests"
+	@echo "  $(CYAN)make unit-test$(NC)  - Run unit tests"
+	@echo "  $(CYAN)make functional-test$(NC) - Run functional tests"
+	@echo "  $(CYAN)make test$(NC)       - Run all tests"
 	@echo "  $(YELLOW)make coverage$(NC)   - Run tests with coverage report"
 	@echo "  $(GREEN)make start$(NC)      - Start all enabled HomeLab services"
 	@echo "  $(RED)make stop$(NC)       - Stop all HomeLab services"

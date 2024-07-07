@@ -7,7 +7,8 @@ from .service_manager import ServiceManager
 @click.group()
 @click.pass_context
 def cli(ctx):
-    ctx.obj = ServiceManager(Config())
+    config = Config()
+    ctx.obj = ServiceManager(config)
 
 
 @cli.command()

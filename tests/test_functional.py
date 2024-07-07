@@ -1,118 +1,149 @@
-import json
 import os
-import tempfile
+import subprocess
 import time
 import unittest
 
 from click.testing import CliRunner
 
 from homelab_manager.cli import cli
+from homelab_manager.config import Config
 
 
 class TestFunctional(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Create temporary docker-compose files
-        cls.temp_dir = tempfile.mkdtemp()
-
-        # Redis service
-        redis_compose = os.path.join(cls.temp_dir, "redis-compose.yml")
-        with open(redis_compose, "w") as f:
-            f.write(
-                """
-version: '3'
-services:
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379"
-"""
-            )
-
-        # Nginx service
-        nginx_compose = os.path.join(cls.temp_dir, "nginx-compose.yml")
-        with open(nginx_compose, "w") as f:
-            f.write(
-                """
-version: '3'
-services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80"
-"""
-            )
-
-        # Create config file
-        cls.config_path = os.path.join(cls.temp_dir, "config.json")
-        config = {
-            "services": [
-                {"name": "redis", "enabled": True, "compose_file": redis_compose},
-                {"name": "nginx", "enabled": True, "compose_file": nginx_compose},
-            ]
-        }
-        with open(cls.config_path, "w") as f:
-            json.dump(config, f)
-
-        # Set environment variable for the config file
+        cls.config_path = os.path.abspath("test_config.json")
         os.environ["HOMELAB_CONFIG"] = cls.config_path
+
+        cls.config = Config(cls.config_path)
+
+        cls.services = {
+            s["name"]: s for s in cls.config.get_services() if s["enabled"]}
+        cls.core_services = [
+            s["name"]
+            for s in cls.config.get_services()
+            if s.get("core", False) and s["enabled"]
+        ]
+        cls.non_core_services = [
+            s["name"]
+            for s in cls.config.get_services()
+            if not s.get("core", False) and s["enabled"]
+        ]
+
+        cls.initially_running = cls.get_running_services()
+
+        # Check if Docker is running
+        try:
+            subprocess.run(["docker", "info"], check=True, capture_output=True)
+        except subprocess.CalledProcessError:
+            raise unittest.SkipTest(
+                "Docker is not running. Skipping functional tests.")
 
     @classmethod
     def tearDownClass(cls):
-        # Clean up temporary files
-        os.remove(cls.config_path)
-        for file in os.listdir(cls.temp_dir):
-            os.remove(os.path.join(cls.temp_dir, file))
-        os.rmdir(cls.temp_dir)
+        cls.stop_test_services()
 
     def setUp(self):
         self.runner = CliRunner()
 
-    def test_start_stop_single_service(self):
-        # Start Redis
-        result = self.runner.invoke(cli, ["start", "redis"])
-        self.assertEqual(result.exit_code, 0)
-        self.assertIn("Service redis started successfully", result.output)
+    @classmethod
+    def get_running_services(cls):
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"], capture_output=True, text=True
+        )
+        return (set(result.stdout.strip().split("\n"))
+                if result.stdout.strip() else set())
 
-        # Check status
+    @classmethod
+    def stop_test_services(cls):
+        current_running = cls.get_running_services()
+        services_to_stop = current_running - cls.initially_running
+        for service in services_to_stop:
+            subprocess.run(["docker", "stop", service], check=True)
+            subprocess.run(["docker", "rm", service], check=True)
+
+    def test_start_stop_core_services(self):
+        for service in self.core_services:
+            result = self.runner.invoke(cli, ["start", service])
+            print(f"Start output for {service}: {result.output}")
+            self.assertEqual(
+                result.exit_code,
+                0,
+                f"Start command failed for {service} with output: {result.output}",
+            )
+            self.assertIn(
+                f"Service {service} started successfully",
+                result.output)
+
+        time.sleep(5)  # Give services time to start up
+
         result = self.runner.invoke(cli, ["status"])
-        self.assertIn("redis: Running", result.output)
-        self.assertIn("nginx: Stopped", result.output)
+        print(f"Status output: {result.output}")
+        for service in self.core_services:
+            self.assertIn(
+                f"{service}: Running",
+                result.output,
+                f"Service {service} is not running. Full status output: {result.output}",
+            )
 
-        # Stop Redis
-        result = self.runner.invoke(cli, ["stop", "redis"])
-        self.assertEqual(result.exit_code, 0)
-        self.assertIn("Service redis stopped successfully", result.output)
+        for service in self.core_services:
+            result = self.runner.invoke(cli, ["stop", service])
+            print(f"Stop output for {service}: {result.output}")
+            self.assertEqual(
+                result.exit_code,
+                0,
+                f"Stop command failed for {service} with output: {result.output}",
+            )
+            self.assertIn(
+                f"Service {service} stopped successfully",
+                result.output)
 
-        # Check status again
         result = self.runner.invoke(cli, ["status"])
-        self.assertIn("redis: Stopped", result.output)
-        self.assertIn("nginx: Stopped", result.output)
+        print(f"Final status output: {result.output}")
+        for service in self.core_services:
+            self.assertIn(
+                f"{service}: Stopped",
+                result.output,
+                f"Service {service} is not stopped. Full status output: {result.output}",
+            )
 
     def test_start_stop_all_services(self):
-        # Start all services
         result = self.runner.invoke(cli, ["start-all"])
-        self.assertEqual(result.exit_code, 0)
+        print(f"Start-all output: {result.output}")
+        self.assertEqual(
+            result.exit_code,
+            0,
+            f"Start-all command failed with output: {result.output}",
+        )
         self.assertIn("All enabled services have been started", result.output)
 
-        # Wait for services to start
-        time.sleep(5)
-
-        # Check status
+        time.sleep(5)  # Give services time to start up
 
         result = self.runner.invoke(cli, ["status"])
-        self.assertIn("redis: Running", result.output)
-        self.assertIn("nginx: Running", result.output)
+        print(f"Status after start-all: {result.output}")
+        for service in self.services:
+            self.assertIn(
+                f"{service}: Running",
+                result.output,
+                f"Service {service} is not running. Full status output: {result.output}",
+            )
 
-        # Stop all services
         result = self.runner.invoke(cli, ["stop-all"])
-        self.assertEqual(result.exit_code, 0)
+        print(f"Stop-all output: {result.output}")
+        self.assertEqual(
+            result.exit_code,
+            0,
+            f"Stop-all command failed with output: {result.output}")
         self.assertIn("All services have been stopped", result.output)
 
-        # Check status again
         result = self.runner.invoke(cli, ["status"])
-        self.assertIn("redis: Stopped", result.output)
-        self.assertIn("nginx: Stopped", result.output)
+        print(f"Final status output: {result.output}")
+        for service in self.services:
+            self.assertIn(
+                f"{service}: Stopped",
+                result.output,
+                f"Service {service} is not stopped. Full status output: {result.output}",
+            )
 
     def test_service_not_found(self):
         result = self.runner.invoke(cli, ["start", "nonexistent"])

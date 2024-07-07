@@ -16,6 +16,9 @@ class TestServiceManager(unittest.TestCase):
                 "compose_file": "./test_service/docker-compose.yml",
             }
         ]
+        self.mock_config.get_enabled_services.return_value = (
+            self.mock_config.get_services.return_value
+        )
         self.manager = ServiceManager(self.mock_config)
 
     @patch("homelab_manager.service_manager.Path.exists")

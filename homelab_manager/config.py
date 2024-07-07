@@ -1,9 +1,12 @@
 import json
+import os
 from pathlib import Path
 
 
 class Config:
-    def __init__(self, config_path="config.json"):
+    def __init__(self, config_path=None):
+        if config_path is None:
+            config_path = os.environ.get("HOMELAB_CONFIG", "config.json")
         self.config_path = Path(config_path)
         self.load_config()
 

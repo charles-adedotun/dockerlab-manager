@@ -1,0 +1,20 @@
+{
+  "services": [
+    {
+      "name": "mock-service-1",
+      "enabled": true,
+      "core": true,
+      "compose_file": "https://gist.githubusercontent.com/charles-adedotun/668dcb159e9b248eacb45297989af38a/raw/f0201d30282c8d660db1fd85448e26de753a04a4/mock-service-1.yml"
+    },
+    {
+      "name": "mock-service-2",
+      "enabled": true,
+      "compose_file": "https://gist.githubusercontent.com/charles-adedotun/298461451919cf80e2416b67fcb96d65/raw/88092c869743d64ffcae0fc64ad6e13e8d594107/mock-service-2.yml"
+    },
+    {
+      "name": "mock-service-3",
+      "enabled": false,
+      "compose_file": "https://gist.githubusercontent.com/charles-adedotun/81007e2740706c3b86502719baa5541a/raw/249f41d5b9632374a7dc14c4e5345bfffabe1613/mock-service-3.yml"
+    }
+  ]
+}

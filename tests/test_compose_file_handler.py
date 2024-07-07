@@ -1,3 +1,6 @@
+import os
+import subprocess
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -35,9 +38,17 @@ class TestComposeFileHandler(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertTrue(result.endswith("local/docker-compose.yml"))
 
+    def test_get_compose_file_not_found(self):
+        self.mock_config.get_services.return_value = [
+            {"name": "test_service", "compose_file": "nonexistent.yml"}
+        ]
+        result = self.compose_handler.get_compose_file("test_service")
+        self.assertIsNone(result)
+
     @patch("subprocess.run")
-    def test_run_docker_compose(self, mock_run):
-        mock_run.return_value = MagicMock(stdout="Compose output")
+    def test_run_docker_compose_success(self, mock_run):
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="Compose output")
         self.compose_handler.get_compose_file = MagicMock(
             return_value="path/to/docker-compose.yml"
         )
@@ -47,7 +58,31 @@ class TestComposeFileHandler(unittest.TestCase):
         self.assertTrue(result)
         mock_run.assert_called_once()
 
-    # Add more tests for error cases and other scenarios...
+    @patch("subprocess.run")
+    def test_run_docker_compose_failure(self, mock_run):
+        mock_run.side_effect = subprocess.CalledProcessError(1, "cmd")
+        self.compose_handler.get_compose_file = MagicMock(
+            return_value="path/to/docker-compose.yml"
+        )
+
+        result = self.compose_handler.run_docker_compose(
+            "test_service", ["up", "-d"])
+        self.assertFalse(result)
+
+    def test_run_docker_compose_no_file(self):
+        self.compose_handler.get_compose_file = MagicMock(return_value=None)
+        result = self.compose_handler.run_docker_compose(
+            "test_service", ["up", "-d"])
+        self.assertFalse(result)
+
+    def test_cleanup(self):
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+            tmp_file.write(b"test content")
+            tmp_path = tmp_file.name
+
+        self.compose_handler.temp_files["test_service"] = tmp_path
+        self.compose_handler.__del__()
+        self.assertFalse(os.path.exists(tmp_path))
 
 
 if __name__ == "__main__":

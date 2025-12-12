@@ -1,5 +1,7 @@
 # Dockerlab Manager
 
+[![Tests](https://github.com/charles-adedotun/dockerlab-manager/actions/workflows/test.yml/badge.svg)](https://github.com/charles-adedotun/dockerlab-manager/actions/workflows/test.yml)
+
 CLI tool to manage Docker Compose services across your homelab.
 
 ## The Problem

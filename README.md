@@ -37,7 +37,7 @@ Dockerlab Manager solves this with a single config file that maps all your servi
 pip install dockerlab-manager
 
 # Or install from source
-git clone https://github.com/yourusername/dockerlab-manager.git
+git clone https://github.com/charles-adedotun/dockerlab-manager.git
 cd dockerlab-manager
 pip install -e .
 ```
@@ -268,7 +268,7 @@ dockerlab import --input snapshot.json
 ### Setup Development Environment
 
 ```bash
-git clone https://github.com/yourusername/dockerlab-manager.git
+git clone https://github.com/charles-adedotun/dockerlab-manager.git
 cd dockerlab-manager
 
 # Create virtual environment
@@ -282,18 +282,18 @@ pip install -e ".[dev]"
 pytest
 
 # Type checking
-mypy dockerlab
+mypy homelab_manager
 
 # Linting
-ruff check dockerlab
-black --check dockerlab
+ruff check homelab_manager
+black --check homelab_manager
 ```
 
 ### Project Structure
 
 ```
 dockerlab-manager/
-├── dockerlab/
+├── homelab_manager/
 │   ├── __init__.py
 │   ├── cli.py              # Click CLI commands
 │   ├── config.py           # Config loading and validation
@@ -312,7 +312,7 @@ dockerlab-manager/
 
 ### Adding New Commands
 
-Commands are defined in `dockerlab/cli.py` using Click:
+Commands are defined in `homelab_manager/cli.py` using Click:
 
 ```python
 @cli.command()
